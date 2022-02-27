@@ -54,6 +54,18 @@ The idea of UCB action selection is that the square-root term is a measure of th
 
 #### Gradient Bandit Algorithms
 
+Here we consider learning a nummerical preference for each action $a$, which we denote $H_t(a)$. The larger the preference, the more often that action is taken. 
+
+A softmax distribution:
+$$Pr\{A_t = a\} \doteq \frac{e^{H_t(a)}}{\sum_{b=1}^{k} e^{H_t(b)}} \doteq \pi_t(a)$$
+$\pi_t(a)$ for the probability of taking action a at time step t.  
+There is 
+![replace1](replace1.PNG) 
+
+
+#### Associative Search (Contextual Bandits)
+
+In a general reinforcement learning task there is more than one situation, and the goal is to learn a policy: a mapping from situations to the actions that are best in those situations. Associative search tasks are often now called contextual bandits in the literature. Associative search tasks are intermediate between the k-armed bandit problem and the full reinforcement learning problem. They are like the full reinforcement learning problem in that they involve learning a policy, but like our version of the k-armed bandit problem in that each action a↵ects only the immediate reward. If actions are allowed to affect the next situation as well as the reward, then we have the full reinforcement learning problem. We present this problem in the next chapter and consider its ramifications throughout the rest of the book.
 
 
 ### Finite Markov Desicion Process 
