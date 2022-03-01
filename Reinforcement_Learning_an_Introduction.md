@@ -117,23 +117,149 @@ The agent's goal is to maximize the cumulative reward it recieves in the long ru
     ![return_next](pics/returns_next_step.PNG) 
 
 ### Bellman Equations 
+#### State-Value Bellman Equation
+By recalling the definition of return, we could get the follow equation for state value:
+$$
+\begin{align}
+v_{\pi} = E_{\pi}[G_t | S_t = s]  \\ 
+v_{\pi} = \sum_a \pi(a|s) \sum_{r} \sum_{s'} P(s', r | s, a) \cdot [r + \gamma E_{\pi} [G_{t+1} | S_{t+1}  = s']]  \\
+v_{\pi} = \sum_a \pi(a|s) \sum_{r} \sum_{s'} P(s', r | s, a) \cdot [r + \gamma \cdot v_{\pi}(s')] 
+\end{align} 
+$$ 
+
+$$
+E_{\pi}[G_{t+1} |S_{t+1} = s'] = \sum_{a'} \pi(a'| s') \sum_{r'} \sum_{s''} p(r', s''| s', a') \cdot [r' +  \gamma E_{\pi} [G_{t+2} | s_{t+2} = s'']
+$$ 
+
+So we change a value evaluation problem into solve linear equations. 
+
+#### Action-Value Bellman Equation
+$$
+\begin{align}
+q(s, a) \doteq E_{\pi}[G_t|s_t = s, A_t = a] \\
+q(s, a) = \sum_{r} \sum_{s'} p(r, s' | s, a) \cdot (r + \gamma \cdot E_{\pi}[G_{t+1}|S_{t+1} = s']) \\ 
+q(s, a) = \sum_{r} \sum_{s'} p(r, s' | s, a) \cdot (r + \gamma \sum_{a'} \pi(a' | s') q_{\pi}(s', a')) \\ 
+q(s, a) = \sum_{r} \sum_{s'}  p(r, s' | s, a) \cdot (r + \gamma \cdot ( \sum_{a'} \pi(a'|s') \sum_{r'} \sum_{s''} p(r', s'' | s', a') \cdot ( r' + \gamma (E_{\pi} [G_{t+2} | S_{t+2} = s'', A_{t+1} = a))
+\end{align}
+$$
+
+### Bellman Optimality Equation
+
+#### Optimal Value Function 
+$$ \pi_1  \ge \pi_2 \text{if and only if  } v_{\pi 1} \ge v_{\pi_2} \text{ for all s $ \in$ S }  $$
+
+So we get the best policy by following:
+
+$$v_{\pi_*} (s)\doteq E_{\pi_*}[G_t | S_t 
+= s] = \underset{\pi} {max} v_{\pi}(s) \text{ for all s $\in$ S}$$
+
+$$q_{\pi_*} (s, a)  \doteq \underset {\pi} {max} q_{\pi}(s, a) \text{ for all s $\in$ S and a $\in$ A }$$
+
+#### Optimal State Value Function
+Firstly we have the above state value function. Then we apply the optimal operation：
+$$ v_*(s) = \sum_{a} \pi_* (a|s) \sum_{r} \sum_{s'} p(r, s'| s, a) (r + \gamma \cdot v_*(s'))$$
+So if the we are using the above formula in a deterministic condition:
+$$v_*(s) = \underset{a}{max} p(r, s'| s, a) (r + \gamma \cdot v_*(s'))$$ 
+
+#### Optimal Action Value Function
+Firstly we have action value Bellman equation, if we apply the best policy:
+$$ q_*(s, a) = \sum_r \sum_{s'} p(r, s' | s, a) (r + \sum_a \pi_* (a | s) q_* (s', a'))  $$
+And if we consider in a deterministic condition:
+$$ q_*(s, a) = \sum_r \sum_{s'} p(s', r | s, a) (r + \gamma \cdot \underset{a}{max} q_*(s', a'))$$
+
+**Notice that optimality equations can not be solved by a linear solver since max operation is not linear!!**
+![value_diagram1](pics/value_diagram1.PNG)
+
+![value_diagram2](pics/value_diagram2.PNG)
+
+![backup_diagram](pics/backup_diagram.PNG)
+
+Our framing of the reinforcement learning problem forces us to settle for approximations. However, it also presents us with some unique opportunities for achieving useful approximations. For example, in approximating optimal behavior, **there may be many states that the agent faces with such a low probability that selecting suboptimal actions for them has little impact on the amount of reward the agent receives.** Tesauro’s backgammon player, for example, plays with exceptional skill even though it might make very bad decisions on board configurations that never occur in games against experts. In fact, it is possible that TD-Gammon makes bad decisions for a large fraction of the game’s state set. **The online nature of reinforcement learning makes it possible to approximate optimal policies in ways that put more effort into learning to make good decisions for frequently encountered states, at the expense of less e↵ort for infrequently encountered states.** This is one key property that distinguishes reinforcement learning from other approaches to approximately solving MDPs.
+
+### Dynamic Programming
+
+#### Policy Evaluation
+We mainly follow the below formula:   
+$$v_{k+1}(s) = \sum_{a} \pi(a|s) \sum_{s', r} p(s', r|s, a) (r + \gamma v_k(s')) $$
+
+![policy_eval](pics/iterative_policy_evaluation.PNG)
+
+#### Policy Improvement
+We could find greedy policy by following: 
+![greedy_improve](pics/greedy_improve.PNG)
+
+The greedy policy takes action that looks the best at the short term. (one step ahead according to $v_{\pi}$)
+
+#### Policy Iteration
+
+Once a policy $\pi$ has been improved using $v_{\pi}$ to yield a better policy, $v_{\pi'}$, we can then compute $v_0$ and improve it again to yield an even better. We can thus obtain a sequence of monotonically improving policies and value functions:  
+$$ \pi_0 \rightarrow v_0 \rightarrow \pi_1 \rightarrow v_1 \rightarrow \pi_2 \rightarrow \cdots $$
+
+![policy_iteration](pics/policy_iteration.PNG)
+
+#### Value Iteration 
+
+The policy evaluation step of policy iteration can be truncated in several ways without losing the convergence guarantees of policy iteration. One important special case is **when policy evaluation is stopped after just one sweep (one update of each state)**. This algorithm is called **value iteration**. It can be written as **a particularly simple update operation that combines the policy improvement and truncated policy evaluation steps**:
+
+![value_iteration](pics/value_iteration.PNG)   
+for all state $s \in S$. For arbitrary $v_0$, the sequence $\{v_k\}$ can be shown to converge to $v_*$ under the same conditions that guarantee the existence of $v_*$. 
+
+![value_iteration_algorithm](pics/value_iteration_algorithm.PNG)
+
+#### Asynchronous Dynamic Programming
+
+A major drawback to the DP methods that we have discussed so far is that they involve operations over the entire state set of the MDP, that is, they require sweeps of the state set. If the state set is very large, then even a single sweep can be prohibitively expensive.
 
 
 
-
-
-
-
-*  
-####
-
-### Dynamic Programming 
+#### Efficiency of Dynamic Programming
+ 
 
 ### Monte-Carlo Methods 
 
+####  Monte Carlo Predictions  
+
+#### Monte Carlo Estimation of Action Value
+
+#### Monte Carlo Control 
+
+#### Monte Carlo Control with Exploring Start 
+
+#### On-policy Vs. Off-policy 
+
+
+#### Off-policy Prediction via Importance Sampling
+
+#### Incremental Implementation
+
+#### Off-policy Monte Carlo Control 
+
 ### Temporal-Differenece Learning 
 
-### n-Steps Boostrapping 
+#### TD Prediction
+
+#### Advantages of TD Prediction Methods
+
+#### Optimality of TD(0) 
+
+#### Sarsa: On-policy TD Control
+
+#### Q_learning: Off-policy TD Control 
+
+#### Expected Sarsa
+
+#### Maximization Bias and Double Q_learning
+
+### n-Steps Boostrapping
+
+#### n-Step TD Prediction 
+
+#### n-Step Sarsa
+
+#### n-Step Off-policy Learning
+
+#### Off-policy Learning Without Importance Sampling: The n-step Tree Backup Algorithm
+
 
 ### Planning and Learning with Tabular Methods 
 
