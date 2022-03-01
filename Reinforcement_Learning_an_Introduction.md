@@ -208,24 +208,69 @@ for all state $s \in S$. For arbitrary $v_0$, the sequence $\{v_k\}$ can be show
 
 #### Asynchronous Dynamic Programming
 
-A major drawback to the DP methods that we have discussed so far is that they involve operations over the entire state set of the MDP, that is, they require sweeps of the state set. If the state set is very large, then even a single sweep can be prohibitively expensive.
+A major drawback to the DP methods that we have discussed so far is that they involve operations over the entire state set of the MDP, that is, they require sweeps of the state set. If the state set is very large, then even a single sweep can be prohibitively expensive.    
+Asynchronous DP algorithms are in-place iterative DP algorithms that are not organized in terms of systematic sweeps of the state set. These algorithms update the values of states in any order whatsoever, using whatever values of other states happen to be available.   
+The values of some states may be updated several times before the values of others are updated once. To converge correctly, however, an asynchronous algorithm must continue to update the values of all the states: it can’t ignore any state after some point in the computation. Asynchronous DP algorithms allow great flexibility in selecting states to update.     
+At the same time, the latest value and policy information from the DP algorithm can guide the agent’s decision making. For example, we can apply updates to states as the agent visits them. This makes it possible to focus the DP algorithm’s updates onto parts of the state set that are most relevant to the agent. This kind of focusing is a repeated theme in reinforcement
+learning. 
 
+#### Generalized Policy Iteration
 
+Using the term *generalized policy iteration* **(GPI)** to refer to the general idea of letting policy-evaluation and policyimprovement processes interact, independent of the granularity and other details of the two processes. Almost all reinforcement learning methods are well described as GPI. That is, all have been improved with respect to the value function and the value function and the value function always being driven toward the value function for the policy.   
+It is easy to see that if both the evaluation process and improvement process stablized, then the value function and policy must be optimal.  
+\center ![GPI](pics/GPI1.PNG) 
 
 #### Efficiency of Dynamic Programming
- 
+
+DP may not be practical for very large problems, but compared with other methods for solving MDPs.   
+DP method is guaranteed to find an optimal policy in polynomial time even though the total number of (deterministic) policies is $k^n$.  
+Linear programming methods become impractical at a much smaller number of states than do DP methods (by a factor of about 100). For the largest problems, only DP methods are feasible.
+
+DP is sometimes thought to be of limited applicability because of the **curse of dimensionality**, the fact that the number of states often grows exponentially with the number of state variables. Large state sets do create difficulties but these are inherent difficulties of the problem, not of DP as a solution method.  
+In practice, DP methods can be used with today’s computers to solve MDPs with millions of states. And on problems with large state spaces, **asynchronous DP** solutions are often preferred. 
 
 ### Monte-Carlo Methods 
+Here we do not assume complete knowledge of the environment. Monte Carlo methods require only experience—sample sequences of states, actions, and rewards from actual or simulated interaction with an environment. Learning from actual experience is striking because it requires no prior knowledge of the environment’s dynamics, yet can still attain optimal behavior.    
+Learning from simulated experience is also powerful. **Although a model is required, the model need only generate sample transitions, not the complete probability distributions of all possible transitions that is required for dynamic programming (DP).** **In surprisingly many cases it is easy to generate experience sampled according to the desired probability distributions, but infeasible to obtain the distributions in explicit form.** 
 
 ####  Monte Carlo Predictions  
 
+##### Monte Carlo First Visit Vs. Every Visit
+
+In particular, suppose we wish to estimate $v_{\pi}$, each occurrence of state s in an episode is called a visit to $s$. Of course, s may be visited multiple times in the same episode; let us call the first time it is visited in an episode the first visit to s.The **first-visit MC method estimates as the average of the returns following first visits to s, whereas the every-visit MC method averages the returns following all visits to s**.   
+ These two Monte Carlo (MC) methods are very similar but have slightly different theoretical properties. First-visit MC has been most widely studied, dating back to the 1940s, and is the one we focus on in this chapter. **Every-visit MC extends more naturally to function approximation and eligibility traces**, as discussed in Chapters 9 and 12. First-visit MC is shown in procedural form in the box.
+
+![mc_first_visit](pics/MC_FIRST_VISIT.PNG) 
+
 #### Monte Carlo Estimation of Action Value
 
+With a model, state values alone are used to determine a policy; one simply looks ahead one step and chooses whichever action leads to the best combination of reward and next state. **Without a model, however, state values alone are not useful.    
+One must explicitly estimate the value of each action in order for the values to be useful in suggesting a policy. Thus, one of our primary goals for Monte Carlo methods is to estimate $q_{\pi}$. 
+
+The only complication is that many state–action pairs may never be visited. With no returns to average, the Monte Carlo estimates of the other actions will not improve with experience. To compare alternatives we need to estimate the value of all the actions from each state, not just the one we currently favor. This is the general problem of **maintaining exploration**, we must **assure continual exploration**. One way to do this is by specifying that the episodes start in a state–action pair, and that every pair has a nonzero probability of being selected as the start. This guarantees that all state–action pairs will be visited an infinite number of times in the limit of an infinite number of episodes. We call this the assumption of **exploring starts**.   
+The assumption of exploring starts is sometimes useful, but of course it **cannot be relied upon in general, particularly when learning directly from actual interaction with an environment**. The most
+common alternative approach to assuring that all state–action pairs are encountered is to consider **only policies that are stochastic with a nonzero probability of selecting all actions in each state**. 
+For now, we retain the assumption of exploring starts and complete the presentation of a full Monte Carlo control method. 
 #### Monte Carlo Control 
 
-#### Monte Carlo Control with Exploring Start 
+##### Monte Carlo Control with Exploring Start 
+
+##### Monte Carlo Control without Exploring Start 
+
 
 #### On-policy Vs. Off-policy 
+Firstly we consider Monte Carlo method as a classical policy iteration problem:
+$$\pi_0 \stackrel{E}{\rightarrow} q_{\pi_0} \stackrel{I}{\rightarrow}  \pi_1 \stackrel{E}{\rightarrow} q_{\pi_1} \stackrel{I}{\rightarrow} \cdots \stackrel{I}{\rightarrow} \pi_* \stackrel{E}{\rightarrow} v_* $$
+
+* Evaluation: it is done exactly as described in the preceding section, we use the MC with exploring starts here. 
+* Iteration: for any action-value function q, the corresponding greedy policy is the one that, for each $s \in S$, deterministiclly chooses an action with maximal action value:
+  $$\pi(s) \doteq \underset {a}{argmax} q(s, a)$$
+
+There are some approaches to avoid infinite number of episode nominally required for policy iteration, in which we give up policy evaluation before we move to policy iteration, as we have introduced in GPI.  
+One extreme of this idea is value iteration, in which only one iteration of iterative policy evaluation is performed between each stop of iteration. **The inplace version of value evaluation** is even more extreme, there we alternate between improvement and evaluation steps for single states.   
+For MC it is natural to **alternate between evaluation and improvement on an episode-by-episode basis**. After each episode, the observed returns are used for policy evaluation, and then the policy is improved at all the states visited in the episode. A complete simple algorithm along these lines, which we call Monte Carlo ES, for Monte Carlo with Exploring Starts. 
+![MCES](pics/MCES.PNG)
+
 
 
 #### Off-policy Prediction via Importance Sampling
