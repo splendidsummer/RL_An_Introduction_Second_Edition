@@ -253,12 +253,12 @@ common alternative approach to assuring that all state–action pairs are encoun
 For now, we retain the assumption of exploring starts and complete the presentation of a full Monte Carlo control method. 
 #### Monte Carlo Control 
 
+Monte Carlo control is a model-free method if we make decision based on Action-Value.  
+
+* Greedy policy improvement over $V(s)$ requires model of MDP $\pi(s) = \underset{a \in A}{argmax} R_a^s +P_{s,s'}^a V(s')$ 
+* But Greedy policy improvement over Q(s, a) is model-free
+
 ##### Monte Carlo Control with Exploring Start 
-
-##### Monte Carlo Control without Exploring Start 
-
-
-#### On-policy Vs. Off-policy 
 Firstly we consider Monte Carlo method as a classical policy iteration problem:
 $$\pi_0 \stackrel{E}{\rightarrow} q_{\pi_0} \stackrel{I}{\rightarrow}  \pi_1 \stackrel{E}{\rightarrow} q_{\pi_1} \stackrel{I}{\rightarrow} \cdots \stackrel{I}{\rightarrow} \pi_* \stackrel{E}{\rightarrow} v_* $$
 
@@ -271,7 +271,35 @@ One extreme of this idea is value iteration, in which only one iteration of iter
 For MC it is natural to **alternate between evaluation and improvement on an episode-by-episode basis**. After each episode, the observed returns are used for policy evaluation, and then the policy is improved at all the states visited in the episode. A complete simple algorithm along these lines, which we call Monte Carlo ES, for Monte Carlo with Exploring Starts. 
 ![MCES](pics/MCES.PNG)
 
+##### Monte Carlo Control without Exploring Start 
 
+**How can we avoid the unlikely assumption of exploring starts?**
+The only general way to ensure that all actions are selected infinitely often is for the agent to continue to select them. There are two approaches to ensuring this, resulting in what we call **on-policy methods and on-policy methods**. 
+
+
+
+##### On-policy Vs. Off-policy 
+
+On-policy 
+
+* **On-policy**
+  * learning “Learn on the job” Learn about policy $\pi$ from experience sampled from $\pi$
+  * It attempts to evaluate or improve the policy that is used to make decisions 
+
+* **Off-policy**
+  * Off-policy learning “Look over someone’s shoulder”
+Learn about policy π from experience sampled from $\mu$
+  * It evaluates or improves the policy different from that used to generate data. 
+
+
+##### $\epsilon$ Greedy Exploration
+
+
+When applying greedy policy on a given state, we actually keep randomly selecting a action with probability of $\epsilon$:
+$$\pi = \begin{cases} \frac{\epsilon}{m}+ 1- \epsilon, & \text {if $a^*=\underset {a}{argmax} Q(s, a)$ } \\ \frac{\epsilon}{m} & \text {otherwise} \end{cases}$$
+
+**$\epsilon$-Greedy Policy Improvement**
+![epsilon-improve](pics/epsilon_improvement.PNG)
 
 #### Off-policy Prediction via Importance Sampling
 
