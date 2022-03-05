@@ -209,14 +209,14 @@ for all state $s \in S$. For arbitrary $v_0$, the sequence $\{v_k\}$ can be show
 #### Asynchronous Dynamic Programming
 
 A major drawback to the DP methods that we have discussed so far is that they involve operations over the entire state set of the MDP, that is, they require sweeps of the state set. If the state set is very large, then even a single sweep can be prohibitively expensive.    
-Asynchronous DP algorithms are in-place iterative DP algorithms that are not organized in terms of systematic sweeps of the state set. These algorithms update the values of states in any order whatsoever, using whatever values of other states happen to be available.   
+**Asynchronous DP algorithms are in-place iterative DP algorithms that are not organized in terms of systematic sweeps of the state set**. These algorithms update the values of states in any order whatsoever, using whatever values of other states happen to be available.   
 The values of some states may be updated several times before the values of others are updated once. To converge correctly, however, an asynchronous algorithm must continue to update the values of all the states: it can’t ignore any state after some point in the computation. Asynchronous DP algorithms allow great flexibility in selecting states to update.     
 At the same time, the latest value and policy information from the DP algorithm can guide the agent’s decision making. For example, we can apply updates to states as the agent visits them. This makes it possible to focus the DP algorithm’s updates onto parts of the state set that are most relevant to the agent. This kind of focusing is a repeated theme in reinforcement
 learning. 
 
 #### Generalized Policy Iteration
 
-Using the term *generalized policy iteration* **(GPI)** to refer to the general idea of letting policy-evaluation and policyimprovement processes interact, independent of the granularity and other details of the two processes. Almost all reinforcement learning methods are well described as GPI. That is, all have been improved with respect to the value function and the value function and the value function always being driven toward the value function for the policy.   
+Using the term *generalized policy iteration* **(GPI)** to refer to the general idea of letting policy-evaluation and policy improvement processes interact, independent of the granularity and other details of the two processes. Almost all reinforcement learning methods are well described as GPI. That is, all have been improved with respect to the value function and the value function and the value function always being driven toward the value function for the policy.   
 It is easy to see that if both the evaluation process and improvement process stablized, then the value function and policy must be optimal.  
 \center ![GPI](pics/GPI1.PNG) 
 
@@ -274,26 +274,28 @@ For MC it is natural to **alternate between evaluation and improvement on an epi
 ##### Monte Carlo Control without Exploring Start 
 
 **How can we avoid the unlikely assumption of exploring starts?**
-The only general way to ensure that all actions are selected infinitely often is for the agent to continue to select them. There are two approaches to ensuring this, resulting in what we call **on-policy methods and on-policy methods**. 
+The only general way to ensure that all actions are selected infinitely often is for the agent to continue to select them. There are two approaches to ensuring this, resulting in what we call **on-policy methods and off-policy methods**. 
 
+The Monte-Carlo method with Exploring Start is an on-policy method. The overall idea of **on-policy Monte Carlo control is still that of GPI**. As in Monte Carlo ES, we use first-visit MC methods to estimate the action-value function for the current policy. **Without the assumption of exploring starts, however, we cannot simply improve the policy by making it greedy with respect to the current value function**, because that would prevent further exploration of nongreedy actions. Fortunately, **GPI does not require that the policy be taken all the way to a greedy policy, only that it be moved toward a greedy policy**. In our on-policy method we will move it only to an "-greedy policy". For any "-soft policy", $\pi$, any "-greedy policy with respect to $q_{\pi}$ is guaranteed to be better than or equal to $\pi$. The complete algorithm is given in the box below.  
 
+![MonteCarlowithoutExploringstarts](pics/MCWES.PNG)
+
+Now we only achieve the best policy among the **"-soft policies"**, but on the other hand, we have eliminated the assumption of exploring starts. 
 
 ##### On-policy Vs. Off-policy 
 
 On-policy 
 
-* **On-policy**
+* **On-policy**  -- **Target policy = Behavior Policy**
   * learning “Learn on the job” Learn about policy $\pi$ from experience sampled from $\pi$
   * It attempts to evaluate or improve the policy that is used to make decisions 
 
-* **Off-policy**
+* **Off-policy** -- **Target policy is not the same as Behavior Policy**
   * Off-policy learning “Look over someone’s shoulder”
 Learn about policy π from experience sampled from $\mu$
   * It evaluates or improves the policy different from that used to generate data. 
 
-
 ##### $\epsilon$ Greedy Exploration
-
 
 When applying greedy policy on a given state, we actually keep randomly selecting a action with probability of $\epsilon$:
 $$\pi = \begin{cases} \frac{\epsilon}{m}+ 1- \epsilon, & \text {if $a^*=\underset {a}{argmax} Q(s, a)$ } \\ \frac{\epsilon}{m} & \text {otherwise} \end{cases}$$
@@ -302,18 +304,73 @@ $$\pi = \begin{cases} \frac{\epsilon}{m}+ 1- \epsilon, & \text {if $a^*=\underse
 ![epsilon-improve](pics/epsilon_improvement.PNG)
 
 #### Off-policy Prediction via Importance Sampling
+Off-policy: **Target policy is not the same as Behavior Policy**. Off-policy method is often of greater variance and slower convergence.
 
-#### Incremental Implementation
+How can they learn about the optimal policy while behaving according to an exploratory policy? The on-policy approach in the preceding section is **actually a compromise**—it learns action values not for the optimal policy, but for **a near-optimal policy** that still explores.  
+A more **straightforward approach is to use two policies, one that is learned about and that becomes the optimal policy, and one that is more exploratory and is used to generate behavior**. The policy being learned about is called the **target policy**, and the policy used to generate behavior is called the **behavior policy**. In this case we say that learning is from data “off” the target policy, and
+the overall process is termed off-policy learning.
+
+We apply **importance sampling** to off-policy learning by weighting returns according to the relative probability of their trajectories occurring under the target and behavior policies, called the ***importance-sampling ratio***. Given a starting state, the probability of the subsequent state–action trajectory, $A_t$,$S_{t+1}$,$A_{t+1}$,. .., $S_T$, occurring under any policy $\pi$ is
+$$
+\begin{align}
+Pr\{A_t, S_{t+1}, A_{t+1}, \cdots, S_T \} = \\
+\pi(A_t|S_t)p(S_{t+1} | S_t, A_t) \pi(A_{t+1}|S_{t+1})p(S_{t+2} | S_{t+1}, A_{t+1}) \cdots p(S_T | S_{T-1}, A_{T-1}) \\
+= \prod_{k=t}^{T-1} \pi(A_k|S_k)p(S_{k+1} | S_k, A_k)
+\end{align}
+$$
+
+where $p$ here is the state-transition probability function defined by (3.4). Thus, the relative probability of the trajectory under the target and behavior policies (the importance-
+sampling ratio) is
+
+$$\rho \doteq \frac{\prod_{k=t}^{T-1} \pi(A_k|S_k)p(S_{k+1} | S_k, A_k)}{\prod_{k=t}^{T-1} b(A_k|S_k)p(S_{k+1} | S_k, A_k)} = \prod_{k=t}^{T-1} \frac{\pi(A_k|S_k) }{ b(A_k|S_k)} $$ 
+
+##### Importance Sampling for Off-Policy Monte-Carlo
+![IS_MonteCarlo](pics/ISMC.PNG)
+##### Importance Sampling for Off-Policy TD
+![IS_TD](pics/IS_TD.PNG)
+
+<!-- #### Incremental Implementation -->
 
 #### Off-policy Monte Carlo Control 
+![offMCcontrol](pics/offpolicy_MC_control.PNG)
+A potential problem is tha this method **learns only from the tails of episodes**, when all of the **remaining actions in the episode are greedy**. If **nongreedy actions are common, then learning will be slow, particularly for states appearing in the early portions of long episodes**. Potentially, this could greatly slow learning. There has been insu experience with o↵-policy Monte Carlo methods to assess how serious this problem is. If it is serious, the most important way to address it is probably by incorporating temporal-
+di↵erence learning, the algorithmic idea developed in the next chapter.
+
 
 ### Temporal-Differenece Learning 
-
+TD learning is a **combination of Monte Carlo ideas and dynamic programming (DP) ideas. Like Monte Carlo methods, TD methods can learn directly from raw experience without a model of the environment’s dynamics**. Like DP, TD methods update estimates based in part on other learned estimates, without waiting for a final outcome (they bootstrap).  
 #### TD Prediction
+Simplest TD update:  
+$$V(S_t) \leftarrow V(S_t) + \alpha [R_{t+1} + \gamma V(S_{t+1} - V(S_t))] $$
+This TD method is called $TD(0)$, or one step TD, because it is a special case of $TD(\lambda)$ or n-step TD in later chapter. 
+Because $TD(0)$ bases its update in part on an existing estimate, we say it is a boostrapping method like DP. 
+
+We refer to TD and Monte Carlo updates as sample updates because they involve looking ahead to a sample successor state (or state–action pair), using the **value of the successor and the reward along the way to compute a backed-up value, and then updating the value of the original state (or state– action pair) accordingly. Sample updates differ from the expected updates of DP methods in that they are based on a single sample successor rather than on a complete distribution of all possible successors.**
+
+##### TD Error 
+$$ \delta_t \doteq R_{t+1} + V_{t+1} - V(S_t) $$
+
+Notice that the TD error at each time is the error in the estimate made at that time. Because the TD error depends on the next state and next reward, it is not actually available until one time step later. That is,  is the error in V(St), available at time t + 1. Also note that if the array V does not change during the episode (as it does not in
+Monte Carlo methods), then the **Monte Carlo** error can be written as a sum of TD errors:
+![MC_Error](pics/MC_Error.PNG)
 
 #### Advantages of TD Prediction Methods
+TD methods update their estimates based in part on other estimates. They **learn a guess from a guess—they bootstrap**. 
+Obviously TD has an advantage over DP methods in that it does not require a model  of the environment. 
+The next most obvious advantage of TD methods over Monte-Carlo methods that they are naturally implemented online, fully incremental fashion. 
+* **But are TD methods sound?**  
+TD(0) has been proved to converge to $v_\pi$, in the mean for a constant step-size parameter if it is sufficiently small, and with probability 1 if the step-size parameter decreases according to the usual stochastic approximation conditions $\sum_{n=1}^{\infty} \alpha_n(a) = \infty $ and $\sum_{n=1}^{\infty} \alpha_n^2(a) \lt \infty$ . Most convergence proofs apply only to the table-based case of the algorithm presented above, but some also apply to the case of general linear function approximation. These results are discussed in a more general setting in Chapter 9. 
+If both TD and Monte Carlo methods converge asymptotically to the correct predictions, **which method learns faster?**    
+Which makes the more e use of limited data? At the current time this is an open question in the sense that no one has been able to prove mathematically that one method converges faster than the other. In fact, it is not even clear what is the most appropriate formal way to phrase this question! **In practice, however, TD methods have usually been found to converge faster than constant-$\alpha$ MC methods on stochastic tasks, as illustrated in below:
+![MC_VS_TD](pics/MD_VS_TD.PNG)
 
 #### Optimality of TD(0) 
+
+#### Batch Learning
+
+
+
+
 
 #### Sarsa: On-policy TD Control
 
