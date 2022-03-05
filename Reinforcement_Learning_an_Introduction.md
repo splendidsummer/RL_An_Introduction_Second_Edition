@@ -233,7 +233,16 @@ In practice, DP methods can be used with today’s computers to solve MDPs with 
 Here we do not assume complete knowledge of the environment. Monte Carlo methods require only experience—sample sequences of states, actions, and rewards from actual or simulated interaction with an environment. Learning from actual experience is striking because it requires no prior knowledge of the environment’s dynamics, yet can still attain optimal behavior.    
 Learning from simulated experience is also powerful. **Although a model is required, the model need only generate sample transitions, not the complete probability distributions of all possible transitions that is required for dynamic programming (DP).** **In surprisingly many cases it is easy to generate experience sampled according to the desired probability distributions, but infeasible to obtain the distributions in explicit form.** 
 
-####  Monte Carlo Predictions  
+####  Monte Carlo Evaluation 
+* Goal: learn $V_{\pi} $ from the episodes of experience under policy $\pi$ 
+$$S_0, A_0, R_1; S_1, A_1, R_2; \cdots, S_T \thicksim
+ \pi$$
+* Recall that:  
+$$R_t = r_{t+1} + \gamma r_{t+2} + \dots + \gamma^T \cdot r_T$$
+* MC uses the simplest possible idea: value = mean return. Instead of computing expectations, sample the long term return under the policy:
+
+
+
 
 ##### Monte Carlo First Visit Vs. Every Visit
 
@@ -276,11 +285,11 @@ For MC it is natural to **alternate between evaluation and improvement on an epi
 **How can we avoid the unlikely assumption of exploring starts?**
 The only general way to ensure that all actions are selected infinitely often is for the agent to continue to select them. There are two approaches to ensuring this, resulting in what we call **on-policy methods and off-policy methods**. 
 
-The Monte-Carlo method with Exploring Start is an on-policy method. The overall idea of **on-policy Monte Carlo control is still that of GPI**. As in Monte Carlo ES, we use first-visit MC methods to estimate the action-value function for the current policy. **Without the assumption of exploring starts, however, we cannot simply improve the policy by making it greedy with respect to the current value function**, because that would prevent further exploration of nongreedy actions. Fortunately, **GPI does not require that the policy be taken all the way to a greedy policy, only that it be moved toward a greedy policy**. In our on-policy method we will move it only to an "-greedy policy". For any "-soft policy", $\pi$, any "-greedy policy with respect to $q_{\pi}$ is guaranteed to be better than or equal to $\pi$. The complete algorithm is given in the box below.  
+The Monte-Carlo method with Exploring Start is an on-policy method. The overall idea of **on-policy Monte Carlo control is still that of GPI**. As in Monte Carlo ES, we use first-visit MC methods to estimate the action-value function for the current policy. **Without the assumption of exploring starts, however, we cannot simply improve the policy by making it greedy with respect to the current value function**, because that would prevent further exploration of nongreedy actions. Fortunately, **GPI does not require that the policy be taken all the way to a greedy policy, only that it be moved toward a greedy policy**. In our on-policy method we will move it only to an "greedy policy". For any "-soft policy", $\pi$, any "greedy policy with respect to $q_{\pi}$ is guaranteed to be better than or equal to $\pi$. The complete algorithm is given in the box below.  
 
 ![MonteCarlowithoutExploringstarts](pics/MCWES.PNG)
 
-Now we only achieve the best policy among the **"-soft policies"**, but on the other hand, we have eliminated the assumption of exploring starts. 
+Now we only achieve the best policy among the **"soft policies"**, but on the other hand, we have eliminated the assumption of exploring starts. 
 
 ##### On-policy Vs. Off-policy 
 
@@ -294,6 +303,18 @@ On-policy
   * Off-policy learning “Look over someone’s shoulder”
 Learn about policy π from experience sampled from $\mu$
   * It evaluates or improves the policy different from that used to generate data. 
+
+#### Exploration Vs. Exploitation
+
+Ideally, exploration should not be constant during training. It should be larger at the beginning and lower after a lot of experience is accumulated (more greedy when make better estimations) but never disappear(Environment may change).     
+This requirement is asked in convergence proofs of most RL algorithms, f.i. in MC. In $\epsilon$-greedy, this is implemented with variable $\epsilon$ starting from 1 and decreasing with number of experiences until a minimum value from which does not decrease further, f.i:
+$$\epsilon = max(\frac{1}{\alpha T}, 0.1)$$  
+where **T is the number of Trials done** and **$\alpha$ is a constant that controls decrease of exploration**.   
+
+Another popular way to explore is using **Softmax exploration or Gibb's exploration or Boltzman exploration**. Idea is that probability depends on the value of actions, with bias of exploration towards more    promising actions. Softmax action selection methods grade action probabilities by estimated values 
+$$P(s, a) = \frac{e^{\frac{Q(s,a)}{\tau}}}{\sum_{a'\in A}e^{\frac{Q(s,a)}{\tau}}}$$ 
+
+where **parameter $\tau$ is called temperature and decreases with experience When $\tau$ is very large, all actions with roughly same probability of being selected. When $\tau$ is low, almost certainty of selecting the action with higher Q-value**.
 
 ##### $\epsilon$ Greedy Exploration
 
@@ -364,21 +385,34 @@ If both TD and Monte Carlo methods converge asymptotically to the correct predic
 Which makes the more e use of limited data? At the current time this is an open question in the sense that no one has been able to prove mathematically that one method converges faster than the other. In fact, it is not even clear what is the most appropriate formal way to phrase this question! **In practice, however, TD methods have usually been found to converge faster than constant-$\alpha$ MC methods on stochastic tasks, as illustrated in below:
 ![MC_VS_TD](pics/MD_VS_TD.PNG)
 
-#### Optimality of TD(0) 
-
-#### Batch Learning
-
-
-
-
-
 #### Sarsa: On-policy TD Control
+
+The first step is to learn an action-value function rather than a state-value function. In particular, for an on-policy method we must estimate $q_{\pi}(s, a)$ for the current behavior policy $\pi$ and for all states s and actions a. This can be done using essentially the same TD method described above for learning $v_{\pi}$.   
+
+$$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha [R_{t+1} + \gamma \cdot Q(S_{t+1}, A_{t+1}) - Q_{S_t, A_T}]$$
+
+This update is done after every transition from a nonterminal state $S_t$.If $St$+1 is terminal, then $Q(S_{t+1},A_{t+1})$ is defined as zero. This rule uses every element of the quintuple of events, **$(S_t,A_t,R_{t+1},S_{t+1},A_{t+1}), that make up a transition from one state-action pair to the next. This quinAtuple gives rise to the name Sarsa** for the algorithm.   
+![sarsa](pics/Sarsa.PNG)
 
 #### Q_learning: Off-policy TD Control 
 
+One of the early breakthroughs in reinforcement learning was the development of an off-policy TD control algorithm known as Q-learning (Watkins, 1989), defined by
+
+$$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha[R_{t+1}  + \underset{a}{max}Q(S_{t+1}, a) -  Q(S_t, A_t)]$$
+
+In this case, the learned action-value function, Q, **directly approximates $q_*$,** the optimal action-value function, independent of the policy being followed. However, all that is required for **correct convergence is that all pairs continue to be updated**. As we observed in Chapter 5, this is a minimal requirement in the sense that **any method guaranteed to find optimal behavior in the general case must require it**. Under this assumption and a variant of the usual stochastic approximation conditions on the sequence of step-size parameters, Q has been shown to converge with probability 1 to
+$q_*$.   
+
+![q_learning](pics/q_learning.PNG)
+
+#### Q_learning VS. Sarsa
+
 #### Expected Sarsa
 
-#### Maximization Bias and Double Q_learning
+
+#### Maximization Bias and Double Q_learnin
+
+
 
 ### n-Steps Boostrapping
 
@@ -391,11 +425,14 @@ Which makes the more e use of limited data? At the current time this is an open 
 #### Off-policy Learning Without Importance Sampling: The n-step Tree Backup Algorithm
 
 
-### Planning and Learning with Tabular Methods 
+## Planning and Learning with Tabular Methods 
+
+
+
 
 ## Approximate Solution Methods 
 
-### On=policy Prediction with Approximation
+### On-policy Prediction with Approximation
 
 ### On-policy Control with Approximation 
 
