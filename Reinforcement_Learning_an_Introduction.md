@@ -109,7 +109,9 @@ The agent's goal is to maximize the cumulative reward it recieves in the long ru
 * Episode task: When there is a natural notion of final time step, that is, when the agent–environment interaction breaks naturally into subsequences, which we call **episodes**. Each episode ends in a special state called terminal state ($T$). 
 * Continuous task:  In many cases the agent–environment interaction does not break naturally into identifiable episodes, but goes on continually without limit, (which called continuing tasks).
 * Return definition:
-  $$G_t \doteq R_{t+1} + \gamma \cdot R_{t+2} + \gamma^2 \cdot R_{t+3} + \ldots = \sum_{k=0} ^ {\infin} \gamma^k R_{t+k+1}$$ where $\gamma$ is a parameter, $0 \le \gamma \le 1$, called **discounting rate**. 
+  $$G_t \doteq R_{t+1} + \gamma \cdot R_{t+2} + \gamma^2 \cdot R_{t+3} + \ldots = \sum_{k=0} ^ {\infin} \gamma^k R_{t+k+1}$$ 
+  
+where $\gamma$ is a parameter, $0 \le \gamma \le 1$, called **discounting rate**. 
   * If $\gamma \lt 1$, the infinite sum in the above formula has a finite value as long as the reward sequence $\{R_k\} $ is bounded. 
   * If the $\gamma = 0$, the agent is 'myopic' in being concerned only with maximizing immediate rewards. If each of the agent's actions happened to influence only the immediate reward, not future rewards as well. 
   * As $\gamma$ approaches to 1, the return objective takes future rewards into account more strongly, the agent becomes more farsighted. 
@@ -407,30 +409,97 @@ $q_*$.
 
 #### Q_learning VS. Sarsa
 
-#### Expected Sarsa
 
+![sarsa_vs_qlearning1](pics/sarsa_vs_qlearning1.PNG)
+
+
+The upperc graph shows the performance of the Sarsa and Q-learning methods with "$\epsilon$-greedy action selection," =0.1. After an initial transient, Q-learning learns values for the optimal policy, that which travels right along the edge of the cliff. Unfortunately, this results in its occasionally falling off the cliff because of the $\epsilon$-greedy action selection.   
+
+Sarsa, on the other hand, takes the action selection into account and learns the longer but safer path through the upper part of the grid. Although Q-learning actually learns the values of the optimal policy, its online performance is worse than that of Sarsa, which learns the roundabout policy. Of course, if $\epsilon$ were gradually reduced, then both methods would asymptotically converge to the optimal policy.
+
+![sarsa_vs_qlearning2](pics/sarsa_vs_qlearning2.PNG)
+
+#### Expected Sarsa
+Consider the learning algorithm that is just like Q-learning except that instead of the maximum over next state-action pairs it uses the expected value, taking into account how likely each action is under the current policy. 
+
+![expected_sarsa](pics/expected_sarsa.PNG)
+given the next state, $S_{t+1}$, this algorithm moves deterministiclly in the **same direction as Sarsa moves in expectation**. And accordingly it is called *Expected-Sarsa*. 
+![expectsarsa_qlearning_backup](pics/expected_sarsa_qlearning_backup.PNG) 
+
+Expected Sarsa is more complex computationally than Sarsa but, in return, it eliminates the variance due to the random selection of $A_{t+1}$. Given the same amount of experience we might expect it to perform slightly better than Sarsa, and indeed it generally does. 
+In these cliff walking results Expected Sarsa was used on-policy, **but in general it might use a policy different from the target policy $\pi$ to generate behavior, in which case it becomes an off-policy algorithm. For example, suppose $\pi$ is the greedy policy while behavior is more exploratory; then Expected Sarsa is exactly Q-learning. In this sense Expected Sarsa subsumes and generalizes Q-learning while reliably improving over Sarsa. Except for the small additional computational cost, Expected Sarsa may completely dominate both of the other more-well-known TD control algorithms.**
 
 #### Maximization Bias and Double Q_learnin
 
+* **Maximization bias**
 
+All the control algorithms that we have discussed so far involve maximization in the construction of their target policies. For example, in Q-learning the target policy is the greedy policy given the current action values, which also involves a maximization operation. In these algorithms, a maximum over estimated values is used implicitly as an estimate of the maximum value, **which can lead to a significant positive bias**. 
+To see why, consider a single state s where there are many actions a whose true values, $q(s, a)$, are all zero but whose estimated values, **$Q(s, a)$, are uncertain and thus distributed some above and some below zero**. The maximum of the true values is zero, but the maximum of the estimates is positive, a positive bias.
+
+*Are there algorithms that avoid maximization bias?* 
+**One way to view the problem is that it is due to using the same samples (plays) both to determine the maximizing action and to estimate its value.** Suppose we divided the plays in two sets and used them to learn two independent estimates, call them **$Q_1(a)$** and **$Q_2(a)$**, each an estimate of the true value $q(a)$, for all $a \in A$.  
+
+We could then use one estimate, say Q1,to determine the maximizing action $A^* = \underset{a}{argmax} Q_1(a)$, and the other, $Q_2$, to provide the estimate of its value, $Q_2(A^*)= Q_2(\underset{a}{argmax} Q1(a))$.    
+This estimate will then be unbiased in the sense that $E[Q_2(A^*)] = q(A^*)$. We can also repeat the process with the role of the two estimates reversed to yield a second unbiased estimate $Q_1(\underset{a}{argmax} Q_2(a))$. This is the idea of ***double learning***. Note that although we learn two estimates, **only one estimate is updated on each play**. double learning doubles the memory requirem_ents, but does not increase the amount of computation per step.
+
+![double_qlearning](pics/double_qlearning.PNG)
+
+The idea of double learning extends naturally to algorithms for full MDPs. For example, the double learning algorithm analogous to Q-learning, called **Double Q-learning**, divides the time steps in two, perhaps by flipping a coin on each step. If the coin comes up heads, the update is
+
+![dqf](pics/double_qlearning_formula.PNG)
 
 ### n-Steps Boostrapping
+Neither MC methods nor one-step TD methods are always the best. Methods in which the temporal di↵erence extends over n steps are called n-step TD methods. **N-step methods** span a spectrum with MC methods at one end and one-step TD methods at the other. The methods that use n-step updates are still TD methods because they still change an earlier estimate based on how it differs from a later estimate. Now the later estimate is not one step later, but n steps later.   
+Another way of looking at the benefits of n-step methods is that they free you from the tyranny of the time step. **With one-step TD methods the same time step determines how often the action can be changed and the time interval over which bootstrapping is done**. In many applications one wants to **be able to update the action very fast to take into account anything that has changed, but bootstrapping works best if it is over a length of time in which a significant and recognizable state change has occurred**. With one-step TD methods, these time intervals are the same, and so a compromise must be made. n-step methods enable bootstrapping to occur over multiple steps, freeing us from the tyranny of the single time step. 
+
+![nsteps](pics/nstep1.PNG)
 
 #### n-Step TD Prediction 
 
-#### n-Step Sarsa
+* One-step return
+$$G_t \doteq R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \cdots + \gamma^{T-t-1} R_t$$
+$$G_{t:t+1} \doteq R_{t+1} + \gamma V_t(S_{t+1})$$
 
-#### n-Step Off-policy Learning
+* Two-steps return  
+$$G_{t:t+2} \doteq R_{t+1} + \gamma R_{t+1} + \gamma^2 V_{t+1}(R_{t+2})$$   
+* N-step return
+$$G_{t:t+n} \doteq R_{t+1} + \cdots +  \gamma^{n-1} R_{t+n} + \gamma^n V_{t+n-1}(S_{t+n})$$
+All all n, t such that $n \ge 1$ and $0 \le t \le T-n$
+All n-step returns can be considered approximations to the full return, truncated after n steeps and then corrected for the remaining missing terms by $V_{t+n-1}(S_{t+n})$.    
 
-#### Off-policy Learning Without Importance Sampling: The n-step Tree Backup Algorithm
+* State estimation
 
+$$V_{t+n} \doteq V_{t+n-1}(S_t) + \alpha [G_{t:t+n} - V_{t+n-1}(S_t)] \text{  , $0 \le t \le T$}$$
+while the values of all other states remain unchanged: $V_{t+n}(S_t) = V_{t+n-1}(S_t)$ for all $s \ne S $.   
+
+![nsteps2](pics/nstep_td.PNG)
+
+Which value of n is better? 
+
+![nsteps2](pics/nstep_differentn.PNG)
+
+#### n-Step Sarsa 
+
+The main idea is to simply switch states for actions (state-action pairs) and then use an $\epsilon$-greedy policy. The backup diagrams for n-step Sarsa (shown in Figure 7.3) are strings of alternating states and actions, except that the Sarsa ones all start and end with an action rather a state. We redefine n-step returns (update targets) in terms of estimated action values:
+
+![nstep_sarsa](pics/nstep_sarsa.PNG)
+
+![nstep_return_sarsa](pics/nstep_return_sarsa.PNG)
+
+![nstep_sarsa_algorithm](pics/nstep_sarsa_algorithm.PNG)
+
+<!-- #### n-Step Off-policy Learning -->
+
+<!-- #### Off-policy Learning Without Importance Sampling: The n-step Tree Backup Algorithm -->
+
+#### Batch learning 
+
+#### Experience Replay
 
 ## Planning and Learning with Tabular Methods 
 
-
-
-
 ## Approximate Solution Methods 
+Which Function Approximation? 
 
 ### On-policy Prediction with Approximation
 
@@ -443,9 +512,3 @@ $q_*$.
 ### Policy Gradient Method
 
 ## Looking deeper
-
-
-* $$f(x_1,x_2,\ldots ,x_n) = x_1^2 + x_2^2 + \cdots + x_n^2$$ 
-
-
-
